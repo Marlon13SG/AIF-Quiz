@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS AIF-C01 Practice Quiz</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --orange:#e66000;--bg:#f5f5f5;--white:#fff;--border:#d0d0d0;
+  --text:#2d3b45;--muted:#6b7280;
+  --green:#3c763d;--green-bg:#dff0d8;--green-border:#5cb85c;
+  --red:#a94442;--red-bg:#f2dede;--red-border:#d9534f;
+  --blue-bg:#dbeafe;--blue-border:#3b82f6;--blue-text:#1e40af;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+header{background:var(--orange);color:#fff;padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+header h1{font-size:17px;font-weight:700}
+.header-meta{font-size:13px;opacity:.9}
+.layout{display:flex;min-height:calc(100vh - 56px)}
+aside{width:210px;min-width:210px;background:var(--white);border-right:1px solid var(--border);padding:14px 10px;overflow-y:auto;position:sticky;top:56px;height:calc(100vh - 56px)}
+aside h2{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin-bottom:10px}
+.legend{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px;font-size:11px;color:var(--muted)}
+.legend span{display:flex;align-items:center;gap:3px}
+.leg-dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+.q-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+.q-dot{width:32px;height:32px;border-radius:4px;border:1px solid var(--border);background:var(--white);font-size:11px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;color:var(--muted)}
+.q-dot:hover{border-color:var(--orange);color:var(--orange)}
+.q-dot.current{background:var(--orange);border-color:var(--orange);color:#fff}
+.q-dot.correct{background:var(--green-bg);border-color:var(--green-border);color:var(--green)}
+.q-dot.wrong{background:var(--red-bg);border-color:var(--red-border);color:var(--red)}
+main{flex:1;padding:28px 36px;max-width:820px;margin:0 auto;width:100%}
+.progress-wrap{background:#ddd;border-radius:4px;height:5px;margin-bottom:20px}
+.progress-bar{background:var(--orange);height:5px;border-radius:4px;transition:width .3s}
+.q-card{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:26px 30px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.q-header{display:flex;align-items:baseline;gap:10px;margin-bottom:16px}
+.q-badge{background:var(--orange);color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;white-space:nowrap;text-transform:uppercase;letter-spacing:.5px}
+.q-note{font-size:12px;color:var(--muted);font-style:italic}
+.q-text{font-size:15px;line-height:1.65;margin-bottom:20px}
+.choices{display:flex;flex-direction:column;gap:9px}
+.choice-label{display:flex;align-items:flex-start;gap:11px;padding:12px 15px;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;transition:border-color .15s,background .15s;font-size:14px;line-height:1.5;user-select:none}
+.choice-label:hover:not(.locked){border-color:var(--orange);background:#fff8f4}
+.choice-label input{margin-top:3px;accent-color:var(--orange);flex-shrink:0}
+.choice-label.selected:not(.locked){border-color:var(--orange);background:#fff3eb}
+.choice-label.locked{cursor:default}
+.choice-label.res-correct{border-color:var(--green-border);background:var(--green-bg)}
+.choice-label.res-wrong{border-color:var(--red-border);background:var(--red-bg)}
+.choice-label.res-missed{border-color:var(--green-border);background:#e8f4e8;opacity:.85}
+.choice-icon{margin-left:auto;font-size:15px;flex-shrink:0;font-weight:700}
+/* Explanation box */
+.explanation{margin-top:18px;padding:14px 16px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:6px;font-size:13.5px;line-height:1.6;color:var(--blue-text);display:none}
+.explanation strong{display:block;margin-bottom:4px;font-size:13px;text-transform:uppercase;letter-spacing:.4px}
+/* Inline result banner */
+.result-banner{margin-top:14px;padding:10px 15px;border-radius:6px;font-size:14px;font-weight:600;display:none;align-items:center;gap:8px}
+.result-banner.correct{background:var(--green-bg);color:var(--green);border:1px solid var(--green-border)}
+.result-banner.wrong{background:var(--red-bg);color:var(--red);border:1px solid var(--red-border)}
+/* Confirm button (multi-select) */
+.btn-confirm{display:none;margin-top:14px;padding:9px 20px;background:var(--orange);color:#fff;border:none;border-radius:5px;font-size:14px;font-weight:600;cursor:pointer}
+.btn-confirm:hover{background:#c95500}
+/* Nav */
+.q-nav{display:flex;align-items:center;justify-content:space-between;margin-top:20px}
+.btn{padding:9px 20px;border-radius:5px;border:1.5px solid transparent;font-size:14px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.btn-secondary{background:var(--white);color:var(--text);border-color:var(--border)}
+.btn-secondary:hover{border-color:#aaa}
+.btn-primary{background:var(--orange);color:#fff;border-color:var(--orange)}
+.btn-primary:hover{background:#c95500}
+.btn-green{background:#5cb85c;color:#fff;border-color:#4cae4c}
+.btn-green:hover{background:#449d44}
+.btn-primary:disabled,.btn-green:disabled{opacity:.45;cursor:not-allowed}
+/* Results */
+#results-screen{display:none}
+.results-hero{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:36px 44px;text-align:center;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:28px}
+.results-hero h2{font-size:24px;margin-bottom:6px}
+.score-circle{width:130px;height:130px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;margin:18px auto;font-weight:700}
+.score-circle .pct{font-size:36px;line-height:1}
+.score-circle .lbl{font-size:12px;margin-top:3px;opacity:.85}
+.score-pass{background:var(--green-bg);border:4px solid var(--green-border);color:var(--green)}
+.score-fail{background:var(--red-bg);border:4px solid var(--red-border);color:var(--red)}
+.results-stats{display:flex;justify-content:center;gap:28px;margin-top:14px}
+.stat{display:flex;flex-direction:column;align-items:center;gap:3px}
+.stat .num{font-size:28px;font-weight:700}
+.stat .num.c{color:var(--green)}
+.stat .num.w{color:var(--red)}
+.stat .lbl{color:var(--muted);font-size:12px}
+.pass-bar-wrap{max-width:340px;margin:18px auto 0;text-align:left}
+.pass-bar-wrap p{font-size:12px;color:var(--muted);margin-bottom:5px;display:flex;justify-content:space-between}
+.pass-bar-bg{background:#ddd;border-radius:4px;height:10px;position:relative}
+.pass-bar-fill{height:10px;border-radius:4px;transition:width .6s}
+.pass-bar-fill.c{background:var(--green-border)}
+.pass-bar-fill.w{background:var(--red-border)}
+.pass-marker{position:absolute;top:-4px;width:2px;height:18px;background:#333}
+.pass-marker-label{position:absolute;top:20px;font-size:11px;color:#333;transform:translateX(-50%)}
+.results-actions{display:flex;justify-content:center;gap:12px;margin-top:22px;flex-wrap:wrap}
+.btn-retry{padding:10px 24px;border-radius:5px;font-size:14px;font-weight:700;cursor:pointer;border:none}
+.btn-retry.orange{background:var(--orange);color:#fff}
+.btn-retry.orange:hover{background:#c95500}
+.btn-retry.red{background:var(--red);color:#fff}
+.btn-retry.red:hover{background:#843534}
+/* Review */
+.results-breakdown{background:var(--white);border:1px solid var(--border);border-radius:8px;padding:24px 28px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.results-breakdown h3{font-size:16px;margin-bottom:6px}
+.filter-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:5px 14px;border-radius:16px;border:1.5px solid var(--border);background:var(--white);font-size:13px;font-weight:600;cursor:pointer;color:var(--muted)}
+.tab.active{border-color:var(--orange);background:#fff3eb;color:var(--orange)}
+.review-item{border-bottom:1px solid #eee;padding:14px 0}
+.review-item:last-child{border-bottom:none}
+.review-item.hidden{display:none}
+.review-q-header{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.review-status{font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;text-transform:uppercase;white-space:nowrap}
+.status-correct{background:var(--green-bg);color:var(--green)}
+.status-wrong{background:var(--red-bg);color:var(--red)}
+.status-skip{background:#fff8e1;color:#8a6d3b}
+.review-q-text{font-size:13.5px;line-height:1.5;color:var(--text)}
+.review-choices{display:flex;flex-direction:column;gap:5px;margin-top:8px}
+.review-choice{padding:7px 11px;border-radius:4px;font-size:13px;border:1px solid transparent}
+.review-choice.ca{background:var(--green-bg);border-color:var(--green-border)}
+.review-choice.wa{background:var(--red-bg);border-color:var(--red-border)}
+.review-choice.ma{background:#e8f4e8;border-color:var(--green-border);opacity:.8}
+.review-exp{margin-top:8px;padding:9px 12px;background:var(--blue-bg);border:1px solid var(--blue-border);border-radius:4px;font-size:12.5px;color:var(--blue-text);line-height:1.55}
+.answered-count{font-size:12px;color:var(--muted)}
+@media(max-width:680px){aside{display:none}main{padding:16px 14px}.q-card{padding:18px 16px}}
+</style>
+</head>
+<body>
+<noscript>
+<div style="background:#c0392b;color:#fff;padding:20px 24px;font-family:sans-serif;font-size:16px;text-align:center;position:fixed;top:0;left:0;right:0;z-index:9999;">
+  ⚠️ JavaScript is required. Please open this file in <strong>Safari</strong> on your iPad.<br>
+  <span style="font-size:13px;opacity:.9">In the Files app: tap the file → tap the share icon → tap <strong>Open in Safari</strong></span>
+</div>
+</noscript>
+<header>
+  <h1>AWS Certified AI Practitioner — AIF-C01</h1>
+  <span class="header-meta" id="header-meta">Practice Exam · 87 Questions</span>
+</header>
+<div class="layout">
+  <aside>
+    <h2>Question Map</h2>
+    <div class="legend">
+      <span><span class="leg-dot" style="background:var(--green-bg);border:1px solid var(--green-border)"></span>Correct</span>
+      <span><span class="leg-dot" style="background:var(--red-bg);border:1px solid var(--red-border)"></span>Wrong</span>
+      <span><span class="leg-dot" style="background:var(--orange)"></span>Current</span>
+    </div>
+    <div class="q-grid" id="q-grid"></div>
+  </aside>
+  <main>
+    <div id="quiz-screen">
+      <div class="progress-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+      <div class="q-card">
+        <div class="q-header">
+          <span class="q-badge" id="q-badge">Question 1</span>
+          <span class="q-note" id="q-note"></span>
+        </div>
+        <p class="q-text" id="q-text"></p>
+        <div class="choices" id="choices"></div>
+        <button class="btn-confirm" id="btn-confirm" onclick="confirmAnswer()">Confirm Answer</button>
+        <div class="result-banner" id="result-banner"></div>
+        <div class="explanation" id="explanation"><strong>Explanation</strong><span id="exp-text"></span></div>
+      </div>
+      <div class="q-nav">
+        <button class="btn btn-secondary" id="btn-prev" onclick="navigate(-1)">&#8592; Prev</button>
+        <span class="answered-count" id="answered-count"></span>
+        <button class="btn btn-primary" id="btn-next" onclick="navigate(1)" disabled>Next &#8594;</button>
+        <button class="btn btn-green" id="btn-finish" onclick="showResults()" style="display:none" disabled>Finish Quiz</button>
+      </div>
+    </div>
+    <div id="results-screen">
+      <div class="results-hero">
+        <h2 id="results-title">Quiz Complete!</h2>
+        <div class="score-circle" id="score-circle">
+          <span class="pct" id="score-pct">—</span>
+          <span class="lbl">Score</span>
+        </div>
+        <div class="results-stats">
+          <div class="stat"><span class="num c" id="stat-correct">—</span><span class="lbl">Correct</span></div>
+          <div class="stat"><span class="num w" id="stat-wrong">—</span><span class="lbl">Incorrect</span></div>
+          <div class="stat"><span class="num" id="stat-skipped" style="color:var(--muted)">—</span><span class="lbl">Skipped</span></div>
+        </div>
+        <div class="pass-bar-wrap">
+          <p><span>Your score</span><span>Passing: 80%</span></p>
+          <div class="pass-bar-bg">
+            <div class="pass-bar-fill" id="pass-bar-fill" style="width:0%"></div>
+            <div class="pass-marker" id="pass-marker" style="left:80%"></div>
+            <span class="pass-marker-label" style="left:80%">80%</span>
+          </div>
+        </div>
+        <div class="results-actions">
+          <button class="btn-retry orange" onclick="resetAll()">↺ Retake Full Quiz</button>
+          <button class="btn-retry red" id="btn-retake-wrong" onclick="retakeWrong()">↺ Retake Wrong Answers</button>
+        </div>
+      </div>
+      <div class="results-breakdown">
+        <h3>Detailed Review</h3>
+        <div class="filter-tabs">
+          <button class="tab active" onclick="filterReview('all',this)">All</button>
+          <button class="tab" onclick="filterReview('wrong',this)">Wrong Only</button>
+          <button class="tab" onclick="filterReview('correct',this)">Correct Only</button>
+        </div>
+        <div id="review-list"></div>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+const QUESTIONS = [
+  {id:1,text:"A medical company is customizing a foundation model (FM) for diagnostic purposes. The company needs the model to be transparent and explainable to meet regulatory requirements. Which solution will meet these requirements?",choices:["Configure the security and compliance by using Amazon Inspector.","Generate simple metrics, reports, and examples by using Amazon SageMaker Clarify.","Encrypt and secure training data by using Amazon Macie.","Gather more data. Use Amazon Rekognition to add custom labels to the data."],answer:[1],multi:false,exp:"Amazon SageMaker Clarify is specifically designed to provide model explainability — it generates bias reports, feature importance metrics, and partial dependence plots that satisfy regulatory transparency requirements."},
+  {id:2,text:"A company is building a solution to generate images for protective eyewear. The solution must have high accuracy and must minimize the risk of incorrect annotations. Which solution will meet these requirements?",choices:["Human-in-the-loop validation by using Amazon SageMaker Ground Truth Plus","Data augmentation by using an Amazon Bedrock knowledge base","Image recognition by using Amazon Rekognition","Data summarization by using Amazon QuickSight"],answer:[0],multi:false,exp:"Human-in-the-loop (HITL) validation via SageMaker Ground Truth Plus uses human reviewers to verify annotations, directly minimizing incorrect labels and maximizing accuracy."},
+  {id:3,text:"A security company is using Amazon Bedrock to run foundation models (FMs). The company wants to ensure that only authorized users invoke the models. The company needs to identify any unauthorized access attempts to set appropriate IAM policies. Which AWS service should the company use?",choices:["AWS Audit Manager","AWS CloudTrail","Amazon Fraud Detector","AWS Trusted Advisor"],answer:[1],multi:false,exp:"AWS CloudTrail logs every API call made to Amazon Bedrock, providing a full audit trail that lets you identify which principals attempted unauthorized access."},
+  {id:4,text:"A company needs an automated system to convert PDF resumes into plain text format for additional processing. Which AWS service meets this requirement?",choices:["Amazon Textract","Amazon Personalize","Amazon Lex","Amazon Transcribe"],answer:[0],multi:false,exp:"Amazon Textract is an ML service that automatically extracts text and data from scanned documents and PDFs without manual effort."},
+  {id:5,text:"A company wants to use LLMs with Amazon Bedrock to develop a chat interface for product manuals stored as PDFs. Which solution meets these requirements MOST cost-effectively?",choices:["Add one PDF as context per prompt.","Add all PDFs as context to every prompt.","Fine-tune a model with all PDF documents.","Upload PDFs to an Amazon Bedrock knowledge base and use RAG."],answer:[3],multi:false,exp:"A knowledge base with RAG retrieves only the relevant document chunks per query, avoiding the massive token cost of sending all PDFs every time and the high upfront cost of fine-tuning."},
+  {id:6,text:"Which term describes the numerical representations of real-world objects and concepts that AI and NLP models use to improve understanding of textual information?",choices:["Embeddings","Tokens","Models","Binaries"],answer:[0],multi:false,exp:"Embeddings are dense numerical vector representations that capture the semantic meaning of words or concepts, enabling models to understand relationships between them."},
+  {id:7,text:"A company is building an application that needs to generate synthetic data based on existing data. Which type of model can the company use?",choices:["Generative adversarial network (GAN)","XGBoost","Residual neural network","WaveNet"],answer:[0],multi:false,exp:"GANs consist of a generator and discriminator that compete to produce realistic synthetic data, making them the standard choice for data generation tasks."},
+  {id:8,text:"A company wants to use Amazon Q Developer to increase developer productivity. What can Amazon Q Developer do?",choices:["Create software snippets, reference tracking, and open-source license tracking.","Run an application without provisioning or managing servers.","Enable voice commands for coding and providing natural language search.","Convert audio files to text documents by using ML models."],answer:[2],multi:false,exp:"Amazon Q Developer supports developers with natural language interactions, voice commands, code suggestions, and intelligent search — directly boosting productivity in the IDE."},
+  {id:9,text:"A company wants to create an Amazon Bedrock application with a limited budget and no long-term commitment. Which pricing model meets these requirements?",choices:["On-Demand","Model customization","Provisioned Throughput","Spot Instance"],answer:[0],multi:false,exp:"On-Demand pricing charges per token with no upfront cost or minimum commitment, making it ideal for flexible, budget-conscious workloads."},
+  {id:10,text:"A digital devices company with no ML experience needs to predict customer demand using internal and external data. Which solution meets these requirements?",choices:["SageMaker built-in algorithms with S3 data.","SageMaker Data Wrangler with built-in algorithms.","SageMaker Data Wrangler with Personalize Trending-Now.","Amazon SageMaker Canvas with data selection."],answer:[3],multi:false,exp:"SageMaker Canvas is a no-code visual interface that allows non-technical users to build and deploy ML models by simply selecting data columns, requiring no coding or ML knowledge."},
+  {id:11,text:"An AI practitioner trained a custom model on Amazon Bedrock using confidential data and wants to ensure the model does not generate responses based on that confidential data. How should the AI practitioner proceed?",choices:["Delete the model, remove confidential data, and retrain.","Mask confidential data in responses using dynamic masking.","Encrypt inference responses using Amazon SageMaker.","Encrypt the model using AWS KMS."],answer:[0],multi:false,exp:"Once confidential data is baked into model weights during training, encryption or masking cannot remove it. The only reliable solution is to remove the data from the training set and retrain the model."},
+  {id:12,text:"Which feature of Amazon OpenSearch Service enables companies to build vector database applications?",choices:["Integration with Amazon S3 for object storage","Support for geospatial indexing and queries","Scalable index management and nearest neighbor search capability","Ability to perform real-time analysis on streaming data"],answer:[2],multi:false,exp:"OpenSearch's k-NN (k-nearest neighbor) plugin enables approximate nearest neighbor search on vector embeddings — the core capability needed for vector database and semantic search applications."},
+  {id:13,text:"A company wants to automate the generation of sales graphs across retail locations. Which AWS solution should the company use?",choices:["Amazon Q in Amazon EC2","Amazon Q Developer","Amazon Q in Amazon QuickSight","Amazon Q in AWS Chatbot"],answer:[2],multi:false,exp:"Amazon Q in Amazon QuickSight is specifically designed for BI use cases — it can automatically generate visualizations, charts, and dashboards from natural language queries."},
+  {id:14,text:"A company wants to build a children's story app using Amazon Bedrock and needs to ensure content is age-appropriate. Which AWS service or feature will meet these requirements?",choices:["Amazon Rekognition","Amazon Bedrock playgrounds","Guardrails for Amazon Bedrock","Agents for Amazon Bedrock"],answer:[2],multi:false,exp:"Guardrails for Amazon Bedrock lets you define content filters, blocked topics, and word filters — exactly what is needed to ensure only child-appropriate content is generated."},
+  {id:15,text:"A company needs to host an ML image classification model and serve predictions without managing infrastructure. Which solution meets these requirements?",choices:["Amazon SageMaker Serverless Inference","Amazon CloudFront","Amazon API Gateway","AWS Batch"],answer:[0],multi:false,exp:"SageMaker Serverless Inference automatically provisions and scales compute to serve predictions without the user managing any underlying infrastructure, and scales to zero when not in use."},
+  {id:16,text:"A company has petabytes of unlabeled customer data and wants to classify customers into tiers for advertising. Which methodology should the company use?",choices:["Supervised learning","Unsupervised learning","Reinforcement learning","Reinforcement learning from human feedback (RLHF)"],answer:[1],multi:false,exp:"Unsupervised learning (specifically clustering) discovers natural groupings in unlabeled data — perfect for segmenting customers into tiers without pre-labeled examples."},
+  {id:17,text:"An AI practitioner needs to write a report about trained ML forecasting models to provide transparency and explainability to stakeholders. What should the report include?",choices:["Code for model training","Partial dependence plots (PDPs)","Sample data for training","Model convergence tables"],answer:[1],multi:false,exp:"Partial dependence plots (PDPs) visually show how each feature influences model predictions, making the model's decision logic understandable to non-technical stakeholders."},
+  {id:18,text:"Which option is a use case for generative AI models?",choices:["Improving network security by using intrusion detection systems","Creating photorealistic images from text descriptions for digital marketing","Enhancing database performance by using optimized indexing","Analyzing financial data to forecast stock market trends"],answer:[1],multi:false,exp:"Generative AI models create new content — text, images, audio, video. Generating photorealistic images from text descriptions is a classic generative AI use case (e.g., Stable Diffusion, DALL-E)."},
+  {id:19,text:"An AI practitioner's LLM generates content that sounds plausible and factual but is incorrect. Which problem is the LLM having?",choices:["Data leakage","Hallucination","Overfitting","Underfitting"],answer:[1],multi:false,exp:"Hallucination is the well-known LLM phenomenon where the model confidently generates factually incorrect but plausible-sounding content due to its probabilistic nature rather than true factual lookup."},
+  {id:20,text:"A loan company wants to build a responsible AI model to minimize bias. Which TWO actions should the company take?",choices:["Detect imbalances or disparities in the data.","Ensure that the model runs frequently.","Evaluate the model's behavior so that the company can provide transparency to stakeholders.","Use the ROUGE technique to ensure the model is 100% accurate.","Ensure that the model's inference time is within accepted limits."],answer:[0,2],multi:true,exp:"Detecting data imbalances addresses bias at the source, and evaluating model behavior for transparency ensures fairness is maintained and communicated to stakeholders. Both are core responsible AI practices."},
+  {id:21,text:"What are tokens in the context of generative AI models?",choices:["The basic units of input/output a model operates on, representing words, subwords, or linguistic units.","Mathematical representations of words or concepts.","Pre-trained weights fine-tuned for specific tasks.","Specific prompts or instructions given to a generative AI model."],answer:[0],multi:false,exp:"Tokens are the atomic units LLMs process — typically words, subwords, or characters depending on the tokenizer. Input and output length, as well as pricing, are measured in tokens."},
+  {id:22,text:"An AI practitioner wants to store Amazon Bedrock invocation logs to monitor model input and output data. Which strategy should be used?",choices:["Configure AWS CloudTrail as the logs destination.","Enable invocation logging in Amazon Bedrock.","Configure AWS Audit Manager as the logs destination.","Configure model invocation logging in Amazon EventBridge."],answer:[1],multi:false,exp:"Amazon Bedrock has a built-in invocation logging feature that captures full model input and output payloads to S3 or CloudWatch Logs — specifically designed for this monitoring use case."},
+  {id:23,text:"A company wants to build an LLM but is concerned about the environmental effect of training. Which Amazon EC2 instance type has the LEAST environmental effect?",choices:["Amazon EC2 C series","Amazon EC2 G series","Amazon EC2 P series","Amazon EC2 Trn series"],answer:[3],multi:false,exp:"EC2 Trn (Trainium) instances are custom AWS chips purpose-built for ML training with significantly higher energy efficiency per FLOP compared to general-purpose GPU instances, reducing carbon footprint."},
+  {id:24,text:"A financial institution's VPC is not allowed any internet traffic but needs to access Amazon Bedrock. Which AWS service or feature meets this requirement?",choices:["AWS PrivateLink","Amazon Macie","Amazon CloudFront","Internet gateway"],answer:[0],multi:false,exp:"AWS PrivateLink creates private endpoints that route traffic between your VPC and AWS services (including Bedrock) entirely within the AWS network, with no internet traffic required."},
+  {id:25,text:"A company deployed a deep learning model for object detection. Which AI process occurs when the model analyzes a new image to identify objects?",choices:["Training","Inference","Model deployment","Bias correction"],answer:[1],multi:false,exp:"Inference is the process of applying a trained model to new, unseen input data to generate predictions or outputs. Training is the learning phase; inference is the prediction phase."},
+  {id:26,text:"A company needs to manage the flow of data from Amazon S3 to SageMaker Studio notebooks. Which solution meets this requirement?",choices:["Use Amazon Inspector to monitor SageMaker Studio.","Use Amazon Macie to monitor SageMaker Studio.","Configure SageMaker to use a VPC with an S3 endpoint.","Configure SageMaker to use S3 Glacier Deep Archive."],answer:[2],multi:false,exp:"A VPC with an S3 VPC endpoint creates a private, high-throughput data path between SageMaker and S3 without traversing the public internet, which is the correct architecture for managed data flow."},
+  {id:27,text:"A company wants to adapt pre-trained models for new related tasks without starting from scratch. Which ML strategy meets these requirements?",choices:["Increase the number of epochs.","Use transfer learning.","Decrease the number of epochs.","Use unsupervised learning."],answer:[1],multi:false,exp:"Transfer learning reuses the weights and knowledge of a pre-trained model as a starting point for a new related task, dramatically reducing training time and data requirements."},
+  {id:28,text:"A company wants to use AI to check if an IP address is from a suspicious source. Which solution meets these requirements?",choices:["Build a speech recognition system.","Create an NLP named entity recognition system.","Develop an anomaly detection system.","Create a fraud forecasting system."],answer:[2],multi:false,exp:"Anomaly detection identifies patterns that deviate from normal behavior — flagging suspicious IP addresses based on unusual traffic patterns is a classic anomaly detection use case."},
+  {id:29,text:"A company wants to prevent an LLM from being manipulated with prompt injection techniques. Which action will reduce these risks?",choices:["Create a prompt template that teaches the LLM to detect attack patterns.","Increase the temperature parameter on invocation requests.","Avoid using LLMs not listed in Amazon SageMaker.","Decrease the number of input tokens on invocations."],answer:[0],multi:false,exp:"A well-designed system prompt template that instructs the model to recognize and reject injection patterns is the most direct mitigation for prompt injection attacks."},
+  {id:30,text:"A price-prediction model performs well on training data but poorly in production. What should the company do to mitigate this problem?",choices:["Reduce the volume of training data.","Add hyperparameters to the model.","Increase the volume of training data.","Increase the model training time."],answer:[2],multi:false,exp:"Poor production performance with good training performance indicates overfitting. The primary remedy is more diverse training data, which forces the model to learn generalizable patterns rather than memorizing the training set."},
+  {id:31,text:"An Amazon Bedrock FM fails to access SSE-S3 encrypted data in S3. Which solution will fix this?",choices:["Ensure the Bedrock role has permission to decrypt data with the correct key.","Set S3 bucket permissions to allow public access.","Use prompt engineering to tell the model to look in S3.","Ensure the S3 data does not contain sensitive information."],answer:[0],multi:false,exp:"Amazon Bedrock assumes an IAM role when accessing S3. That role must have explicit s3:GetObject and kms:Decrypt permissions for the correct SSE-S3 key to access encrypted data."},
+  {id:32,text:"A company needs to upload a new validation dataset that Amazon Bedrock can use for model validation. Which AWS service meets this requirement?",choices:["Amazon S3","Amazon EBS","Amazon EFS","AWS Snowcone"],answer:[0],multi:false,exp:"Amazon S3 is the standard storage service used by Amazon Bedrock for training datasets, validation datasets, and model artifacts. Bedrock is natively integrated with S3."},
+  {id:33,text:"Which factor will drive inference costs when using an LLM on Amazon Bedrock?",choices:["Number of tokens consumed","Temperature value","Amount of data used to train the LLM","Total training time"],answer:[0],multi:false,exp:"Amazon Bedrock pricing for on-demand inference is based on the number of input and output tokens consumed. Temperature and other parameters do not affect cost."},
+  {id:34,text:"An AI company needs to receive email notifications when an ISV's compliance reports become available. Which AWS service meets this requirement?",choices:["AWS Audit Manager","AWS Artifact","AWS Trusted Advisor","AWS Data Exchange"],answer:[1],multi:false,exp:"AWS Artifact is the self-service portal for AWS compliance reports and agreements. It can notify users when new compliance documents from ISVs or AWS become available."},
+  {id:35,text:"A company needs an LLM to produce more consistent responses to the same input prompt for sentiment analysis. Which inference parameter adjustment meets this requirement?",choices:["Decrease the temperature value","Increase the temperature value","Decrease the length of output tokens","Increase the maximum generation length"],answer:[0],multi:false,exp:"Temperature controls randomness. A lower temperature (closer to 0) makes the model more deterministic and consistent, always choosing the most probable tokens rather than sampling randomly."},
+  {id:36,text:"A company needs to supplement the Amazon Titan FM with relevant data from private data sources. Which solution meets this requirement?",choices:["Use a different FM","Choose a lower temperature value","Create an Amazon Bedrock knowledge base","Enable model invocation logging"],answer:[2],multi:false,exp:"An Amazon Bedrock knowledge base implements Retrieval Augmented Generation (RAG), dynamically injecting relevant private data into the prompt context without modifying the base model."},
+  {id:37,text:"A company wants to develop an educational game for probability questions. Which solution meets these requirements with the LEAST operational overhead?",choices:["Use supervised learning to create a regression model.","Use reinforcement learning to train a probability model.","Use code that calculates probability with simple rules and computations.","Use unsupervised learning to estimate probability density."],answer:[2],multi:false,exp:"Deterministic probability calculations (e.g., 4/13 marbles) are solved trivially with basic arithmetic code. Using ML for a problem with an exact mathematical solution adds unnecessary complexity and overhead."},
+  {id:38,text:"Which functionality does Amazon SageMaker Clarify provide?",choices:["Integrates a RAG workflow","Monitors the quality of ML models in production","Documents critical details about ML models","Identifies potential bias during data preparation"],answer:[3],multi:false,exp:"SageMaker Clarify is purpose-built for bias detection and explainability — it analyzes training data and model predictions to identify statistical biases and disparate impacts across demographic groups."},
+  {id:39,text:"A company collected data and analyzed it by creating a correlation matrix, calculating statistics, and visualizing the data. Which ML pipeline stage is the company in?",choices:["Data pre-processing","Feature engineering","Exploratory data analysis","Hyperparameter tuning"],answer:[2],multi:false,exp:"Exploratory Data Analysis (EDA) involves summarizing data with statistics, visualizations, and correlation matrices to understand distributions and relationships before modeling begins."},
+  {id:40,text:"A company has documents with missing words due to a database error. Which type of model can suggest words to fill in the missing text?",choices:["Topic modeling","Clustering models","Prescriptive ML models","BERT-based models"],answer:[3],multi:false,exp:"BERT (Bidirectional Encoder Representations from Transformers) was specifically pre-trained with a Masked Language Modeling objective — predicting missing/masked tokens in context — making it ideal for this task."},
+  {id:41,text:"A company uses few-shot learning for intent detection in a chatbot. Which additional data does the company need?",choices:["Pairs of chatbot responses and correct user intents","Pairs of user messages and correct chatbot responses","Pairs of user messages and correct user intents","Pairs of user intents and correct chatbot responses"],answer:[2],multi:false,exp:"Few-shot learning for intent detection requires examples that map the model input (user messages) to the desired output (user intents). These input→output pairs teach the model the classification task."},
+  {id:42,text:"A company wants to evaluate the business impact of an LLM question-answering chatbot for call centers. Which business objective should be used?",choices:["Website engagement rate","Average call duration","Corporate social responsibility","Regulatory compliance"],answer:[1],multi:false,exp:"Average call duration directly measures whether the chatbot is reducing the time agents spend on calls. It is the most direct KPI for evaluating whether the chatbot reduces agent workload."},
+  {id:43,text:"A company uses few-shot prompting with 10 examples on Amazon Bedrock (invoked once daily) and wants to lower monthly costs. Which solution meets these requirements?",choices:["Customize the model by using fine-tuning.","Decrease the number of tokens in the prompt.","Increase the number of tokens in the prompt.","Use Provisioned Throughput."],answer:[1],multi:false,exp:"Since Bedrock charges per token, removing some of the 10 in-context examples (fewer tokens per prompt) directly reduces cost per invocation. Fine-tuning and Provisioned Throughput have higher fixed costs for low-frequency use."},
+  {id:44,text:"An accounting firm wants to implement an LLM responsibly to avoid potential harms. What should the firm do? (Select TWO.)",choices:["Include fairness metrics for model evaluation.","Adjust the temperature parameter of the model.","Modify the training data to mitigate bias.","Avoid overfitting on the training data.","Apply prompt engineering techniques."],answer:[0,2],multi:true,exp:"Fairness metrics during evaluation detect discriminatory outcomes, and modifying training data to remove biased samples addresses bias at its source. Both are core responsible AI practices required for ethical deployment."},
+  {id:45,text:"A company wants to evaluate how many images an image classification model classified correctly. Which metric should be used?",choices:["R-squared score","Accuracy","Root mean squared error (RMSE)","Learning rate"],answer:[1],multi:false,exp:"Accuracy is the ratio of correctly classified samples to total samples — it directly answers 'how many did the model get right?' R-squared and RMSE are regression metrics, not classification metrics."},
+  {id:46,text:"What are the key benefits of using Amazon Bedrock agents for a retailer handling thousands of daily support inquiries?",choices:["Generation of custom FMs to predict customer needs","Automation of repetitive tasks and orchestration of complex workflows","Automatically calling multiple FMs and consolidating results","Selecting the FM based on predefined criteria and metrics"],answer:[1],multi:false,exp:"Amazon Bedrock agents autonomously break down tasks, call APIs, and orchestrate multi-step workflows — enabling end-to-end automation of repetitive customer support processes without human intervention."},
+  {id:47,text:"A company wants to increase FM accuracy up to a specific acceptance level. Which solution meets these requirements?",choices:["Decrease the batch size.","Increase the epochs.","Decrease the epochs.","Increase the temperature parameter."],answer:[1],multi:false,exp:"Increasing training epochs allows the model to make more passes over the training data, progressively improving its ability to fit the patterns and raising accuracy toward the target level."},
+  {id:48,text:"A company wants to ensure its image-responding chatbot does not return inappropriate images. Which solution meets these requirements?",choices:["Implement moderation APIs.","Retrain the model with a general public dataset.","Perform model validation.","Automate user feedback integration."],answer:[0],multi:false,exp:"Moderation APIs (such as content safety classifiers) filter model outputs in real time, blocking inappropriate images before they are returned to users — the most direct and reliable safeguard."},
+  {id:49,text:"A law firm wants to build an AI application that reads legal documents and extracts key points. Which solution meets these requirements?",choices:["Build an automatic named entity recognition system.","Create a recommendation engine.","Develop a summarization chatbot.","Develop a multi-language translation system."],answer:[2],multi:false,exp:"A summarization chatbot uses LLMs to read long documents and condense them into key points — directly matching the use case of extracting the most important information from legal documents."},
+  {id:50,text:"A company wants to classify human genes into 20 categories and needs an ML algorithm that documents how its inner mechanism affects the output. Which algorithm meets these requirements?",choices:["Decision trees","Linear regression","Logistic regression","Neural networks"],answer:[0],multi:false,exp:"Decision trees are inherently interpretable — you can trace the exact sequence of feature-based splits that led to any classification, fully documenting how the mechanism works. Neural networks are black boxes by comparison."},
+  {id:51,text:"A company needs each team to access only their own customer data in an LLM application on Amazon Bedrock. Which solution meets these requirements?",choices:["Create a Bedrock custom service role per team with access only to their data.","Create one role with S3 access; ask teams to specify customer name per request.","Redact personal data in S3 and allow team access.","Create one Bedrock role with full S3 access; create IAM roles per team."],answer:[0],multi:false,exp:"Creating a dedicated IAM role per team with IAM policies scoped to only their S3 prefix enforces least-privilege access control, ensuring teams cannot access other teams' data."},
+  {id:52,text:"A company wants to know how much information can fit into one LLM prompt. Which consideration informs this decision?",choices:["Temperature","Context window","Batch size","Model size"],answer:[1],multi:false,exp:"The context window defines the maximum number of tokens (input + output) that a model can process in a single call. It is the hard limit on how much information can fit in one prompt."},
+  {id:53,text:"An AI practitioner built a deep learning model to classify material types in images and wants to measure performance. Which metric will help evaluate the model?",choices:["Confusion matrix","Correlation matrix","R2 score","Mean squared error (MSE)"],answer:[0],multi:false,exp:"A confusion matrix shows the count of correct and incorrect predictions for every class, revealing which categories are misclassified — the standard tool for evaluating multi-class classification models."},
+  {id:54,text:"An AI practitioner discovered that biased input data creates bias in an image generation model. Which technique will solve this problem?",choices:["Data augmentation for imbalanced classes","Model monitoring for class distribution","Retrieval Augmented Generation (RAG)","Watermark detection for images"],answer:[0],multi:false,exp:"Data augmentation for imbalanced classes synthetically increases representation of under-represented groups in the training data, directly correcting the source of the bias before training."},
+  {id:55,text:"A company needs to run inference on large multi-GB archived datasets without needing predictions immediately. Which SageMaker inference option meets these requirements?",choices:["Batch transform","Real-time inference","Serverless inference","Asynchronous inference"],answer:[0],multi:false,exp:"Batch transform is designed for offline processing of large datasets — it runs inference across an entire dataset and outputs results to S3, with no latency requirement and cost-effective batch pricing."},
+  {id:56,text:"A company must identify an Amazon Bedrock model that generates responses in a style the company's employees prefer. What should the company do?",choices:["Evaluate models using built-in prompt datasets.","Evaluate models using a human workforce and custom prompt datasets.","Use public model leaderboards.","Use InvocationLatency metrics in CloudWatch."],answer:[1],multi:false,exp:"Style preference is subjective and organization-specific. Human evaluation using prompts drawn from actual company use cases is the only way to reliably identify which model's outputs employees prefer."},
+  {id:57,text:"Which solution scope in the Generative AI Security Scoping Matrix gives the company the MOST ownership of security responsibilities?",choices:["Using a third-party enterprise app with embedded generative AI.","Building an app using an existing third-party FM.","Fine-tuning an existing third-party FM with business data.","Building and training a generative AI model from scratch with owned data."],answer:[3],multi:false,exp:"Building from scratch with your own data means you own and are responsible for the entire stack: data, training infrastructure, model weights, and deployment security — the maximum possible security ownership."},
+  {id:58,text:"A company has large input data (up to 1 GB) and processing times up to 1 hour and needs near real-time latency. Which SageMaker inference option meets these requirements?",choices:["Real-time inference","Serverless inference","Asynchronous inference","Batch transform"],answer:[0],multi:false,exp:"SageMaker Real-time inference supports payloads up to 1 GB and provides low-latency synchronous responses, making it suitable when near-real-time results are required even for large inputs."},
+  {id:59,text:"A company needs the lowest possible inference latency for language models on edge devices. Which solution meets these requirements?",choices:["Deploy optimized small language models (SLMs) on edge devices.","Deploy optimized large language models (LLMs) on edge devices.","Use a centralized SLM API for async communication with edge devices.","Use a centralized LLM API for async communication with edge devices."],answer:[0],multi:false,exp:"On-device SLMs eliminate all network round-trip latency. Optimized/quantized small models are feasible on edge hardware, providing the absolute lowest latency since inference happens locally."},
+  {id:60,text:"A company wants to analyze and extract key information from audio of customer calls. Which solution meets these requirements?",choices:["Build a conversational chatbot by using Amazon Lex.","Transcribe call recordings by using Amazon Transcribe.","Extract information using Amazon SageMaker Model Monitor.","Create classification labels by using Amazon Comprehend."],answer:[1],multi:false,exp:"Amazon Transcribe converts audio recordings to text transcripts. Once transcribed, downstream analysis (NLP, entity extraction) can be performed. Transcription is the critical first step for audio analysis."},
+  {id:61,text:"A company needs to share and manage ML variables for model development across multiple teams using Amazon SageMaker. Which feature meets this requirement?",choices:["Amazon SageMaker Feature Store","Amazon SageMaker Data Wrangler","Amazon SageMaker Clarify","Amazon SageMaker Model Cards"],answer:[0],multi:false,exp:"SageMaker Feature Store is a centralized repository specifically designed for storing, sharing, and managing ML features across teams — providing consistent, reusable features for model training and inference."},
+  {id:62,text:"A company needs its LLM chatbot to produce short outputs in a specific language. Which solution will align the LLM response quality with expectations?",choices:["Adjust the prompt.","Choose an LLM of a different size.","Increase the temperature.","Increase the Top K value."],answer:[0],multi:false,exp:"Prompt engineering — specifically instructing the model in the system/user prompt to respond briefly and in the target language — is the most direct way to control output format and language."},
+  {id:63,text:"A company wants to fine-tune an Amazon Bedrock FM using company data. Which strategy will successfully fine-tune the model?",choices:["Provide labeled data with the prompt field and the completion field.","Create a .txt file with multiple lines in .csv format.","Purchase Provisioned Throughput for Amazon Bedrock.","Train the model on journals and textbooks."],answer:[0],multi:false,exp:"Amazon Bedrock fine-tuning requires a JSONL dataset with 'prompt' and 'completion' fields. This supervised format teaches the model to produce the desired completions for given inputs."},
+  {id:64,text:"An AI practitioner wants to automatically identify and categorize animals in photos without manual effort. Which strategy meets these requirements?",choices:["Object detection","Anomaly detection","Named entity recognition","Inpainting"],answer:[0],multi:false,exp:"Object detection uses computer vision models to locate and classify objects (like animals) within images automatically, without any manual human labeling step at inference time."},
+  {id:65,text:"A chatbot using an FM from Amazon Bedrock performs poorly on complex scientific terms in research papers. How can the company improve performance?",choices:["Use few-shot prompting.","Use domain adaptation fine-tuning to adapt the FM to complex scientific terms.","Change the FM inference parameters.","Clean data to remove complex scientific terms."],answer:[1],multi:false,exp:"Domain adaptation fine-tuning trains the FM on domain-specific text (scientific papers), teaching it the specialized vocabulary and terminology — directly addressing the root cause of poor performance."},
+  {id:66,text:"A medical company wants to prevent its Amazon Bedrock model from including personal patient information and wants notifications of policy violations. Which solution meets these requirements?",choices:["Use Amazon Macie to scan outputs and set up alerts.","Configure AWS CloudTrail to monitor responses and create alerts.","Use Guardrails for Amazon Bedrock to filter content; set up CloudWatch alarms.","Implement SageMaker Model Monitor to detect data drift and receive alerts."],answer:[2],multi:false,exp:"Guardrails for Amazon Bedrock provides built-in PII filtering and content blocking at the model response level. CloudWatch alarms then notify when guardrail policies are violated — a complete solution."},
+  {id:67,text:"An education provider wants to change the response style based on the user's age range with LEAST implementation effort. Which solution meets these requirements?",choices:["Fine-tune the model with training data for each age range.","Add a role description to the prompt context instructing the model of the age range.","Use chain-of-thought reasoning to deduce the correct style.","Summarize the response based on user age."],answer:[1],multi:false,exp:"Adding a simple instruction like 'Respond as if explaining to a 7-year-old' to the system prompt requires no training or infrastructure changes — the least effort possible while directly controlling response style."},
+  {id:68,text:"A social media company wants to evaluate LLM outputs for bias with LEAST administrative effort. Which data source should be used?",choices:["User-generated content","Moderation logs","Content moderation guidelines","Benchmark datasets"],answer:[3],multi:false,exp:"Benchmark datasets for bias evaluation (e.g., WinoBias, BBQ) are pre-built, standardized, and ready to use immediately — requiring far less effort than collecting and preparing custom evaluation data."},
+  {id:69,text:"Which strategy evaluates the accuracy of an FM used in image classification tasks?",choices:["Calculate the total cost of resources used.","Measure the model's accuracy against a predefined benchmark dataset.","Count the number of layers in the neural network.","Assess the color accuracy of images processed."],answer:[1],multi:false,exp:"Measuring accuracy against a held-out benchmark dataset (with known ground truth labels) is the standard, objective method for evaluating classification model performance."},
+  {id:70,text:"A company wants to build an AI application that generates SQL queries from text input for non-technical employees. Which solution meets these requirements?",choices:["Generative pre-trained transformers (GPT)","Residual neural network","Support vector machine","WaveNet"],answer:[0],multi:false,exp:"GPT-style LLMs are trained on vast amounts of code including SQL, enabling them to translate natural language queries into valid SQL statements — a task they excel at due to their language-code understanding."},
+  {id:71,text:"Which metric measures the runtime efficiency of operating AI models?",choices:["Customer satisfaction score (CSAT)","Training time for each epoch","Average response time","Number of training instances"],answer:[2],multi:false,exp:"Average response time directly measures how quickly the model processes a request and returns a result at runtime — the key indicator of operational efficiency for deployed AI models."},
+  {id:72,text:"Which option is a benefit of ongoing pre-training when fine-tuning a foundation model?",choices:["Helps decrease the model's complexity","Improves model performance over time","Decreases the training time requirement","Optimizes model inference time"],answer:[1],multi:false,exp:"Ongoing pre-training continuously updates the model's knowledge base with new data, allowing it to keep improving and stay current — directly improving performance over time."},
+  {id:73,text:"An AI practitioner wants to build a search application that handles queries with both text and images. Which type of FM should be used?",choices:["Multi-modal embedding model","Text embedding model","Multi-modal generation model","Image generation model"],answer:[0],multi:false,exp:"A multi-modal embedding model can encode both text and images into the same vector space, enabling semantic search across mixed-modality content — essential for queries involving both."},
+  {id:74,text:"A company trained a custom model on Amazon Bedrock to improve summarization quality. Which action must the company take to use this custom model?",choices:["Purchase Provisioned Throughput for the custom model.","Deploy the custom model in a SageMaker endpoint for real-time inference.","Register the model with the SageMaker Model Registry.","Grant access to the custom model in Amazon Bedrock."],answer:[1],multi:false,exp:"Custom models trained outside of Bedrock's native fine-tuning must be deployed to a SageMaker endpoint first, which then exposes them as an API that applications can call for inference."},
+  {id:75,text:"A company uses LLMs to translate training manuals from English into other languages and wants to evaluate accuracy. Which model evaluation strategy meets these requirements?",choices:["Bilingual Evaluation Understudy (BLEU)","Root mean squared error (RMSE)","Recall-Oriented Understudy for Gisting Evaluation (ROUGE)","F1 score"],answer:[0],multi:false,exp:"BLEU (Bilingual Evaluation Understudy) is the industry-standard automated metric for evaluating machine translation quality by comparing n-gram overlap between generated and reference translations."},
+  {id:76,text:"How can companies use LLMs securely on Amazon Bedrock?",choices:["Design clear prompts; configure IAM roles and policies using least privilege access.","Enable AWS Audit Manager for automatic model evaluation.","Enable Amazon Bedrock automatic model evaluation jobs.","Use CloudWatch Logs to make models explainable and monitor for bias."],answer:[0],multi:false,exp:"Clear prompts reduce ambiguity and injection risks, while least-privilege IAM ensures only authorized principals can invoke models and access data — the two foundational pillars of secure LLM usage."},
+  {id:77,text:"A company wants its customer service chatbot to improve by learning from past interactions and online resources. Which AI learning strategy provides this capability?",choices:["Supervised learning with a manually curated dataset","Reinforcement learning with rewards for positive customer feedback","Unsupervised learning to find clusters of similar inquiries","Supervised learning with a continuously updated FAQ database"],answer:[1],multi:false,exp:"Reinforcement learning with human feedback (RLHF) uses reward signals from positive customer outcomes to continuously improve model responses — enabling genuine self-improvement from real interactions."},
+  {id:78,text:"A company deploys a fine-tuned SageMaker JumpStart chatbot and must comply with multiple regulatory frameworks. Which TWO capabilities can the company show compliance for?",choices:["Auto scaling inference endpoints","Threat detection","Data protection","Cost optimization","Loosely coupled microservices"],answer:[1,2],multi:true,exp:"SageMaker JumpStart supports AWS security compliance frameworks including threat detection (via GuardDuty/CloudTrail integration) and data protection (encryption, VPC, IAM) — both auditable for regulatory compliance."},
+  {id:79,text:"An e-commerce company wants to determine customer sentiments from written product reviews. Which TWO AWS services meet these requirements?",choices:["Amazon Lex","Amazon Comprehend","Amazon Polly","Amazon Bedrock","Amazon Rekognition"],answer:[1,3],multi:true,exp:"Amazon Comprehend provides built-in sentiment analysis for text. Amazon Bedrock's LLMs can also perform nuanced sentiment classification via prompting. Both can analyze written reviews for positive/negative/neutral sentiment."},
+  {id:80,text:"A company wants to use a pre-trained generative AI model for marketing content that aligns with the company's brand voice. Which solution meets these requirements?",choices:["Optimize model architecture and hyperparameters.","Increase model complexity by adding more layers.","Create effective prompts with clear instructions and context to guide generation.","Select a large diverse dataset to pre-train a new generative model."],answer:[2],multi:false,exp:"Prompt engineering — providing the model with detailed context about brand voice, tone, and style guidelines — is the fastest and most effective way to align generative AI output with specific brand requirements."},
+  {id:81,text:"A student copies content from generative AI to write essays. Which challenge of responsible generative AI does this scenario represent?",choices:["Toxicity","Hallucinations","Plagiarism","Privacy"],answer:[2],multi:false,exp:"Using AI-generated content and presenting it as original work constitutes plagiarism — a key responsible AI concern around intellectual property, academic integrity, and proper attribution of AI-generated content."},
+  {id:82,text:"A company wants its FM-based chatbot to produce responses that adhere to company tone. Which solution meets these requirements?",choices:["Set a low limit on the number of tokens the FM can produce.","Use batch inferencing to process detailed responses.","Experiment and refine the prompt until the FM produces the desired responses.","Define a higher number for the temperature parameter."],answer:[2],multi:false,exp:"Prompt engineering (iteratively refining the system prompt and instructions) is the primary technique for shaping an FM's tone, style, and behavior to match organizational requirements without retraining."},
+  {id:83,text:"A security camera ML model disproportionately flags people of a specific ethnic group. Which type of bias is affecting the model output?",choices:["Measurement bias","Sampling bias","Observer bias","Confirmation bias"],answer:[1],multi:false,exp:"Sampling bias occurs when the training data over- or under-represents certain groups. If the model was trained on footage disproportionately featuring one ethnic group as suspects, it learns that skewed pattern."},
+  {id:84,text:"A company wants to use an LLM to classify text passages as positive or negative sentiment. Which prompt engineering strategy meets these requirements?",choices:["Provide examples of text passages with positive/negative labels, then the new passage.","Provide a detailed explanation of sentiment analysis and how LLMs work.","Provide the new passage without any context or examples.","Provide the new passage with examples of unrelated tasks."],answer:[0],multi:false,exp:"Few-shot prompting — providing labeled examples (positive/negative) before the target text — teaches the model the exact classification format and label vocabulary, yielding consistent and accurate results."},
+  {id:85,text:"Which AWS service or feature can help an AI development team quickly deploy and consume an FM within the team's VPC?",choices:["Amazon Personalize","Amazon SageMaker JumpStart","PartyRock, an Amazon Bedrock Playground","Amazon SageMaker endpoints"],answer:[3],multi:false,exp:"Amazon SageMaker endpoints deploy models as private REST APIs within a VPC, giving the team direct, secure, low-latency access to FM inference without public internet exposure."},
+  {id:86,text:"A company has petabytes of unstructured internal data and wants to transform it into structured format for ML tasks. Which service meets these requirements?",choices:["Amazon Lex","Amazon Rekognition","Amazon Kinesis Data Streams","AWS Glue"],answer:[3],multi:false,exp:"AWS Glue is a fully managed ETL (Extract, Transform, Load) service that crawls data sources, infers schemas, and transforms unstructured or semi-structured data into structured formats for analytics and ML."},
+  {id:87,text:"A company wants to analyze thousands of daily customer support interactions to identify frequently asked questions and develop insights. Which AWS service meets this requirement?",choices:["Amazon Lex","Amazon Comprehend","Amazon Transcribe","Amazon Translate"],answer:[1],multi:false,exp:"Amazon Comprehend uses NLP to analyze large volumes of text — detecting topics, key phrases, entities, and patterns — making it ideal for extracting insights and identifying common themes from support interactions."}
+];
+
+// ── State ──
+let ACTIVE_QUESTIONS = [...QUESTIONS];
+let current = 0;
+let userAnswers = [];
+let revealed = [];
+let isRetakeMode = false;
+
+function initState() {
+  userAnswers = ACTIVE_QUESTIONS.map(() => []);
+  revealed = ACTIVE_QUESTIONS.map(() => false);
+}
+
+// ── Build sidebar ──
+function buildGrid() {
+  const grid = document.getElementById('q-grid');
+  grid.innerHTML = '';
+  ACTIVE_QUESTIONS.forEach((q, i) => {
+    const dot = document.createElement('button');
+    dot.className = 'q-dot';
+    dot.id = `dot-${i}`;
+    dot.textContent = q.id;
+    dot.title = `Q${q.id}`;
+    dot.onclick = () => goTo(i);
+    grid.appendChild(dot);
+  });
+}
+
+function updateGrid() {
+  ACTIVE_QUESTIONS.forEach((q, i) => {
+    const dot = document.getElementById(`dot-${i}`);
+    if (!dot) return;
+    dot.className = 'q-dot';
+    if (i === current) { dot.classList.add('current'); return; }
+    if (!revealed[i]) return;
+    const ua = [...userAnswers[i]].sort((a,b)=>a-b);
+    const ca = [...q.answer].sort((a,b)=>a-b);
+    const ok = ua.length === ca.length && ua.every((v,j)=>v===ca[j]);
+    dot.classList.add(ok ? 'correct' : 'wrong');
+  });
+}
+
+// ── Render ──
+function renderQuestion() {
+  const q = ACTIVE_QUESTIONS[current];
+  const total = ACTIVE_QUESTIONS.length;
+  const isRevealed = revealed[current];
+
+  document.getElementById('q-badge').textContent = `Question ${current + 1} of ${total}`;
+  document.getElementById('q-note').textContent = q.multi ? '(Select TWO)' : '';
+  document.getElementById('q-text').textContent = q.text;
+  document.getElementById('progress-bar').style.width = ((current + 1) / total * 100) + '%';
+
+  const answeredCount = revealed.filter(Boolean).length;
+  document.getElementById('answered-count').textContent = `${answeredCount} / ${total} answered`;
+
+  const choicesDiv = document.getElementById('choices');
+  choicesDiv.innerHTML = '';
+  const selected = userAnswers[current];
+
+  q.choices.forEach((text, idx) => {
+    const label = document.createElement('label');
+    let cls = 'choice-label';
+    if (isRevealed) {
+      cls += ' locked';
+      const isCorrect = q.answer.includes(idx);
+      const isSel = selected.includes(idx);
+      if (isSel && isCorrect) cls += ' res-correct';
+      else if (isSel && !isCorrect) cls += ' res-wrong';
+      else if (!isSel && isCorrect) cls += ' res-missed';
+    } else if (selected.includes(idx)) {
+      cls += ' selected';
+    }
+    label.className = cls;
+
+    const input = document.createElement('input');
+    input.type = q.multi ? 'checkbox' : 'radio';
+    input.name = `q${current}`;
+    input.value = idx;
+    input.checked = selected.includes(idx);
+    input.disabled = isRevealed;
+    if (!isRevealed) input.addEventListener('change', () => handleSelect(idx));
+
+    const letter = String.fromCharCode(65 + idx);
+    const span = document.createElement('span');
+    span.style.flex = '1';
+    span.innerHTML = `<strong>${letter}.</strong> ${text}`;
+
+    label.appendChild(input);
+    label.appendChild(span);
+
+    if (isRevealed) {
+      const isCorrect = q.answer.includes(idx);
+      const isSel = selected.includes(idx);
+      if (isSel || isCorrect) {
+        const icon = document.createElement('span');
+        icon.className = 'choice-icon';
+        if (isSel && isCorrect) icon.textContent = '✓';
+        else if (isSel && !isCorrect) icon.textContent = '✗';
+        else if (!isSel && isCorrect) icon.textContent = '✓';
+        label.appendChild(icon);
+      }
+    }
+    choicesDiv.appendChild(label);
+  });
+
+  // Confirm button (multi-select, not yet revealed)
+  const confirmBtn = document.getElementById('btn-confirm');
+  if (q.multi && !isRevealed) {
+    confirmBtn.style.display = 'block';
+    confirmBtn.disabled = userAnswers[current].length < q.answer.length;
+  } else {
+    confirmBtn.style.display = 'none';
+  }
+
+  // Result banner
+  const banner = document.getElementById('result-banner');
+  const expBox = document.getElementById('explanation');
+  const expText = document.getElementById('exp-text');
+  if (isRevealed) {
+    const ua = [...userAnswers[current]].sort((a,b)=>a-b);
+    const ca = [...q.answer].sort((a,b)=>a-b);
+    const ok = ua.length === ca.length && ua.every((v,j)=>v===ca[j]);
+    banner.style.display = 'flex';
+    banner.className = 'result-banner ' + (ok ? 'correct' : 'wrong');
+    banner.textContent = ok ? '✓ Correct!' : '✗ Incorrect — see the correct answer highlighted above.';
+    expBox.style.display = 'block';
+    expText.textContent = q.exp;
+  } else {
+    banner.style.display = 'none';
+    expBox.style.display = 'none';
+  }
+
+  // Nav
+  document.getElementById('btn-prev').style.visibility = current === 0 ? 'hidden' : 'visible';
+  const isLast = current === total - 1;
+  const nextBtn = document.getElementById('btn-next');
+  const finishBtn = document.getElementById('btn-finish');
+  nextBtn.style.display = isLast ? 'none' : 'inline-flex';
+  finishBtn.style.display = isLast ? 'inline-flex' : 'none';
+  nextBtn.disabled = !isRevealed;
+  finishBtn.disabled = !isRevealed;
+
+  updateGrid();
+}
+
+function handleSelect(idx) {
+  const q = ACTIVE_QUESTIONS[current];
+  if (revealed[current]) return;
+  if (q.multi) {
+    const pos = userAnswers[current].indexOf(idx);
+    if (pos === -1) {
+      if (userAnswers[current].length < q.answer.length) userAnswers[current].push(idx);
+    } else {
+      userAnswers[current].splice(pos, 1);
+    }
+    renderQuestion();
+  } else {
+    userAnswers[current] = [idx];
+    reveal();
+  }
+}
+
+function confirmAnswer() {
+  if (userAnswers[current].length >= ACTIVE_QUESTIONS[current].answer.length) reveal();
+}
+
+function reveal() {
+  revealed[current] = true;
+  renderQuestion();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function navigate(dir) {
+  const next = current + dir;
+  if (next >= 0 && next < ACTIVE_QUESTIONS.length) { current = next; renderQuestion(); window.scrollTo(0,0); }
+}
+
+function goTo(idx) { current = idx; renderQuestion(); window.scrollTo(0,0); }
+
+// ── Results ──
+function isCorrectAt(i) {
+  const ua = [...userAnswers[i]].sort((a,b)=>a-b);
+  const ca = [...ACTIVE_QUESTIONS[i].answer].sort((a,b)=>a-b);
+  return ua.length === ca.length && ua.every((v,j)=>v===ca[j]);
+}
+
+function showResults() {
+  let correct = 0, wrong = 0, skipped = 0;
+  ACTIVE_QUESTIONS.forEach((q,i) => {
+    if (!revealed[i] || userAnswers[i].length === 0) { skipped++; return; }
+    isCorrectAt(i) ? correct++ : wrong++;
+  });
+  const total = ACTIVE_QUESTIONS.length;
+  const pct = Math.round((correct / total) * 100);
+  const pass = pct >= 80;
+
+  document.getElementById('results-title').textContent = isRetakeMode ? 'Retake Complete!' : 'Quiz Complete!';
+  document.getElementById('score-pct').textContent = pct + '%';
+  document.getElementById('stat-correct').textContent = correct;
+  document.getElementById('stat-wrong').textContent = wrong;
+  document.getElementById('stat-skipped').textContent = skipped;
+  document.getElementById('score-circle').className = 'score-circle ' + (pass ? 'score-pass' : 'score-fail');
+
+  const fill = document.getElementById('pass-bar-fill');
+  fill.style.width = pct + '%';
+  fill.className = 'pass-bar-fill ' + (pass ? 'c' : 'w');
+
+  // Retake wrong button visibility
+  const retakeWrongBtn = document.getElementById('btn-retake-wrong');
+  retakeWrongBtn.style.display = wrong > 0 ? 'inline-block' : 'none';
+
+  // Build review
+  const reviewList = document.getElementById('review-list');
+  reviewList.innerHTML = '';
+  ACTIVE_QUESTIONS.forEach((q, i) => {
+    const isRev = revealed[i];
+    const isSkipped = !isRev || userAnswers[i].length === 0;
+    const correct_q = !isSkipped && isCorrectAt(i);
+
+    const item = document.createElement('div');
+    item.className = 'review-item';
+    item.dataset.result = isSkipped ? 'skip' : correct_q ? 'correct' : 'wrong';
+
+    const statusLabel = isSkipped ? 'Skipped' : correct_q ? 'Correct' : 'Incorrect';
+    const statusCls = isSkipped ? 'status-skip' : correct_q ? 'status-correct' : 'status-wrong';
+
+    item.innerHTML = `
+      <div class="review-q-header">
+        <span class="review-status ${statusCls}">Q${q.id} — ${statusLabel}</span>
+      </div>
+      <div class="review-q-text">${q.text}</div>
+      <div class="review-choices" id="rrc-${i}"></div>
+      <div class="review-exp">${q.exp}</div>
+    `;
+    reviewList.appendChild(item);
+
+    const rc = item.querySelector(`#rrc-${i}`);
+    q.choices.forEach((txt, idx) => {
+      const isAns = q.answer.includes(idx);
+      const isSel = userAnswers[i].includes(idx);
+      let cls = '';
+      if (isSel && isAns) cls = 'ca';
+      else if (isSel && !isAns) cls = 'wa';
+      else if (!isSel && isAns) cls = 'ma';
+      if (cls) {
+        const div = document.createElement('div');
+        div.className = `review-choice ${cls}`;
+        const ltr = String.fromCharCode(65 + idx);
+        const icon = cls === 'wa' ? ' ✗' : ' ✓';
+        div.textContent = `${ltr}. ${txt}${icon}`;
+        rc.appendChild(div);
+      }
+    });
+  });
+
+  document.getElementById('quiz-screen').style.display = 'none';
+  document.getElementById('results-screen').style.display = 'block';
+  window.scrollTo(0,0);
+}
+
+function filterReview(type, btn) {
+  document.querySelectorAll('.filter-tabs .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.review-item').forEach(item => {
+    if (type === 'all') item.classList.remove('hidden');
+    else if (type === 'wrong') item.classList.toggle('hidden', item.dataset.result !== 'wrong');
+    else if (type === 'correct') item.classList.toggle('hidden', item.dataset.result !== 'correct');
+  });
+}
+
+function resetAll() {
+  ACTIVE_QUESTIONS = [...QUESTIONS];
+  isRetakeMode = false;
+  document.getElementById('header-meta').textContent = `Practice Exam · ${QUESTIONS.length} Questions`;
+  current = 0;
+  initState();
+  buildGrid();
+  document.getElementById('quiz-screen').style.display = 'block';
+  document.getElementById('results-screen').style.display = 'none';
+  renderQuestion();
+  window.scrollTo(0,0);
+}
+
+function retakeWrong() {
+  const wrongOnes = ACTIVE_QUESTIONS.filter((q,i) => {
+    if (!revealed[i] || userAnswers[i].length === 0) return false;
+    return !isCorrectAt(i);
+  });
+  if (wrongOnes.length === 0) return;
+  ACTIVE_QUESTIONS = wrongOnes;
+  isRetakeMode = true;
+  document.getElementById('header-meta').textContent = `Retake Mode · ${wrongOnes.length} Wrong Answers`;
+  current = 0;
+  initState();
+  buildGrid();
+  document.getElementById('quiz-screen').style.display = 'block';
+  document.getElementById('results-screen').style.display = 'none';
+  renderQuestion();
+  window.scrollTo(0,0);
+}
+
+// ── Init ──
+initState();
+buildGrid();
+renderQuestion();
+</script>
+</body>
+</html>
